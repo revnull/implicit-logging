@@ -21,6 +21,8 @@ module Control.Logging (
                         Level(..)
                         -- * Log Annotations
                        ,LogFormatter
+                       ,getLogLevel
+                       ,getLogContext
                        ,LogAnnotation(..)
                        ,LATime(..)
                        ,LAContext(..)
@@ -33,7 +35,7 @@ module Control.Logging (
                        ,fileLogConfig
                        ,handleLogConfig
                        -- * Log Runners
-                       ,Logging(..)
+                       ,Logging
                        ,runLogging
                        ,withLogContext
                        ,withLogHeader
@@ -56,10 +58,8 @@ module Control.Logging (
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.Trans
-import Data.Maybe
 import Data.Monoid
 import Data.Time
-import Data.Time.Clock
 import System.IO
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Maybe
@@ -178,9 +178,9 @@ withLogLevel a = runLogging conf where
 
 -- | Write a line to the log with the specified 'Level'.
 logLine :: (MonadIO m, Logging c) => Level -> String -> m ()
-logLine lev lin = logLine where
+logLine lev lin = logLine' where
     LogConfig ml lh io c = ?log
-    logLine = when (lev >= ml) $ liftIO $ do
+    logLine' = when (lev >= ml) $ liftIO $ do
         hdr'' <- flip runReaderT (c, lev) $
             forM lh $ \(LH h) -> runMaybeT (logFormat h)
         let hdr' = (fmap (++ " ")) <$> hdr''
