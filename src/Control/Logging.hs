@@ -195,7 +195,7 @@ logPrint lev = logLine lev . show
 debug :: (MonadIO m, Logging c) => String -> m ()
 debug = logLine Debug
 
--- | Log a an instance of 'Show' at the Debug 'Level'.
+-- | Log an instance of 'Show' at the Debug 'Level'.
 printDebug :: (MonadIO m, Show s, Logging c) => s -> m ()
 printDebug = logPrint Debug
 
@@ -203,7 +203,7 @@ printDebug = logPrint Debug
 info :: (MonadIO m, Logging c) => String -> m ()
 info = logLine Info
 
--- | Log a an instance of 'Show' at the Info 'Level'.
+-- | Log an instance of 'Show' at the Info 'Level'.
 printInfo :: (MonadIO m, Show s, Logging c) => s -> m ()
 printInfo = logPrint Info
 
@@ -211,7 +211,7 @@ printInfo = logPrint Info
 warn :: (MonadIO m, Logging c) => String -> m ()
 warn = logLine Warn
 
--- | Log a an instance of 'Show' at the Warn 'Level'.
+-- | Log an instance of 'Show' at the Warn 'Level'.
 printWarn :: (MonadIO m, Show s, Logging c) => s -> m ()
 printWarn = logPrint Warn
 
@@ -219,7 +219,7 @@ printWarn = logPrint Warn
 err :: (MonadIO m, Logging c) => String -> m ()
 err = logLine Err
 
--- | Log a an instance of 'Show' at the Err 'Level'.
+-- | Log an instance of 'Show' at the Err 'Level'.
 printErr :: (MonadIO m, Show s, Logging c) => s -> m ()
 printErr = logPrint Err
 
@@ -227,7 +227,7 @@ printErr = logPrint Err
 crit :: (MonadIO m, Logging c) => String -> m ()
 crit = logLine Crit
 
--- | Log a an instance of 'Show' at the Crit 'Level'.
+-- | Log an instance of 'Show' at the Crit 'Level'.
 printCrit :: (MonadIO m, Show s, Logging c) => s -> m ()
 printCrit = logPrint Crit
 
