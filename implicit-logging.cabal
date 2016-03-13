@@ -12,6 +12,10 @@ maintainer:          rev.null@gmail.com
 category:            Control
 build-type:          Simple
 cabal-version:       >=1.10
+description:
+    This package provides a simple framework for adding logging to a program.
+    It supports customizable line formatting and user-provided log contexts.
+    Log configuration information is passed around via implicit parameters.
 
 library
   exposed-modules:     Control.Logging
