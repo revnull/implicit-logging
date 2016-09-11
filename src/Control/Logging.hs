@@ -83,7 +83,7 @@ type LogFormatter c = MaybeT (ReaderT (c, Level) IO)
 -- | A 'LogAnnotation' is a typeclass to establish that an annotation can be
 --   used for logging in the log context 'c'.
 class LogAnnotation c l where
-    logFormat :: l -> LogFormatter c String
+    logFormat :: l -> LogFormatter c ShowS
  
 -- | Returns the current log 'Level'.
 getLogLevel :: LogFormatter c Level
@@ -94,33 +94,33 @@ getLogContext :: LogFormatter c c
 getLogContext = lift $ asks fst
 
 instance LogAnnotation c String where
-    logFormat = return
+    logFormat = return . showString
 
 -- | 'LogAnnotation' to log the 'Level',
 data LALevel = LALevel
 
 instance LogAnnotation c LALevel where
-    logFormat _ = show <$> getLogLevel
+    logFormat _ = shows <$> getLogLevel
 
 -- | 'LogAnnotation' to log the current time. The 'String' argument should
 -- provide the desired time formatting string.
 newtype LATime = LAT String
 
 instance LogAnnotation c LATime where
-    logFormat (LAT fmt) =
-        formatTime defaultTimeLocale fmt <$> liftIO (getCurrentTime)
+    logFormat (LAT fmt) = format <$> liftIO (getCurrentTime) where
+        format = showString . formatTime defaultTimeLocale fmt
 
 -- | 'LogAnnotation' to log a String derived from the context.
 newtype LAContext c = LC (c -> String)
 
 instance LogAnnotation c (LAContext c) where
-    logFormat (LC f) = lift $ asks (f . fst)
+    logFormat (LC f) = lift $ asks (showString . f . fst)
 
 -- | 'LogAnnotation' to log the current 'ThreadId'
 data LAThread = LAThread
 
 instance LogAnnotation c LAThread where
-    logFormat _ = show <$> liftIO myThreadId
+    logFormat _ = shows <$> liftIO myThreadId
 
 -- | A 'LogHeader' wraps a 'LogAnnotation' with existential quantifcation.
 data LogHeader c = forall l. LogAnnotation c l => LH l
@@ -183,8 +183,8 @@ logLine lev lin = logLine' where
     logLine' = when (lev >= ml) $ liftIO $ do
         hdr'' <- flip runReaderT (c, lev) $
             forM lh $ \(LH h) -> runMaybeT (logFormat h)
-        let hdr' = (fmap (++ " ")) <$> hdr''
-            Just hdr = mconcat hdr' <> Just lin
+        let hdr' = (fmap (. showChar ' ')) <$> hdr''
+            Just hdr = (($ []) <$> mconcat hdr') <> Just lin
         liftIO $ io hdr
 
 -- | Write an instance of 'Show' to the log with the specified 'Level'.
