@@ -17,9 +17,9 @@
 -}
 
 module Control.Logging (
-                        -- * Log Levels
+                       -- * Log Levels
                         Level(..)
-                        -- * Log Annotations
+                       -- * Log Annotations
                        ,LogFormatter
                        ,getLogLevel
                        ,getLogContext
@@ -30,6 +30,8 @@ module Control.Logging (
                        ,LAThread(..)
                        ,LogConfig(..)
                        ,LogHeader(..)
+                       -- * Loggable Data
+                       ,Loggable(..)
                        -- * Log Configuration
                        ,defaultLogConfig
                        ,fileLogConfig
@@ -137,6 +139,17 @@ data LogConfig c = LogConfig {
    ,logContext :: c
 }
 
+-- | A 'Loggable' is any data that can be turned into a 'ShowS' by the 'toLog'
+--   function, which formats the data as a log line.
+class Loggable l where
+    toLog :: l -> ShowS
+
+instance Loggable String where
+    toLog = showString
+
+instance Loggable ShowS where
+    toLog = id
+
 -- | The default 'LogConfig' for logging to stdout. Takes the logContext as an
 -- argument. This logs the time and 'Level'.
 defaultLogConfig :: c -> LogConfig c
@@ -177,38 +190,38 @@ withLogLevel a = runLogging conf where
     conf = LogConfig a b c d
 
 -- | Write a line to the log with the specified 'Level'.
-logLine :: (MonadIO m, Logging c) => Level -> String -> m ()
+logLine :: (MonadIO m, Logging c, Loggable l) => Level -> l -> m ()
 logLine lev lin = logLine' where
     LogConfig ml lh io c = ?log
     logLine' = when (lev >= ml) $ liftIO $ do
-        hdr'' <- flip runReaderT (c, lev) $
+        hdr' <- flip runReaderT (c, lev) $
             forM lh $ \(LH h) -> runMaybeT (logFormat h)
-        let hdr' = (fmap (. showChar ' ')) <$> hdr''
-            Just hdr = (($ []) <$> mconcat hdr') <> Just lin
-        liftIO $ io hdr
+        let hdr = (fmap (. showChar ' ')) <$> hdr'
+            Just full = mconcat hdr <> Just (toLog lin)
+        liftIO . io $ full []
 
 -- | Write an instance of 'Show' to the log with the specified 'Level'.
 logPrint :: (MonadIO m, Show s, Logging c) => Level -> s -> m ()
-logPrint lev = logLine lev . show
+logPrint lev = logLine lev . shows
 
 -- | Log a line at the Debug 'Level'.
-debug :: (MonadIO m, Logging c) => String -> m ()
-debug = logLine Debug
+debug :: (MonadIO m, Logging c, Loggable l) => l -> m ()
+debug = logLine Debug . toLog
 
 -- | Log an instance of 'Show' at the Debug 'Level'.
 printDebug :: (MonadIO m, Show s, Logging c) => s -> m ()
 printDebug = logPrint Debug
 
 -- | Log a line at the Info 'Level'.
-info :: (MonadIO m, Logging c) => String -> m ()
-info = logLine Info
+info :: (MonadIO m, Logging c, Loggable l) => l -> m ()
+info = logLine Info . toLog
 
 -- | Log an instance of 'Show' at the Info 'Level'.
 printInfo :: (MonadIO m, Show s, Logging c) => s -> m ()
 printInfo = logPrint Info
 
 -- | Log a line at the Warn 'Level'.
-warn :: (MonadIO m, Logging c) => String -> m ()
+warn :: (MonadIO m, Logging c, Loggable l) => l -> m ()
 warn = logLine Warn
 
 -- | Log an instance of 'Show' at the Warn 'Level'.
@@ -216,7 +229,7 @@ printWarn :: (MonadIO m, Show s, Logging c) => s -> m ()
 printWarn = logPrint Warn
 
 -- | Log a line at the Err 'Level'.
-err :: (MonadIO m, Logging c) => String -> m ()
+err :: (MonadIO m, Logging c, Loggable l) => l -> m ()
 err = logLine Err
 
 -- | Log an instance of 'Show' at the Err 'Level'.
@@ -224,7 +237,7 @@ printErr :: (MonadIO m, Show s, Logging c) => s -> m ()
 printErr = logPrint Err
 
 -- | Log a line at the Crit 'Level'.
-crit :: (MonadIO m, Logging c) => String -> m ()
+crit :: (MonadIO m, Logging c, Loggable l) => l -> m ()
 crit = logLine Crit
 
 -- | Log an instance of 'Show' at the Crit 'Level'.
